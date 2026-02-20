@@ -29,4 +29,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: GridRecon3D-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk 
+          path: android/app/build/outputs/apk/debug/*.apk
