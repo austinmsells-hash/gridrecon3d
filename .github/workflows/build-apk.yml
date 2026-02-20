@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JDK 17
+      - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -22,7 +22,7 @@ jobs:
       - name: Build APK
         run: |
           cd android
-          chmod +x ./gradlew
+          chmod +x gradlew || true
           ./gradlew assembleDebug
 
       - name: Upload APK
