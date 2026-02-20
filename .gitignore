@@ -1,0 +1,11 @@
+# Gradle / Android build outputs
+**/.gradle/
+**/build/
+
+# Local IDE stuff
+.idea/
+*.iml
+.vscode/
+
+# macOS
+.DS_Store
