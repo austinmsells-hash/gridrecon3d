@@ -15,7 +15,7 @@ android {
         versionName = "0.1-beta"
     }
 
-    // ✅ Make Java + Kotlin agree (JDK 17)
+    // Make Java + Kotlin agree (JDK 17)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -48,10 +48,13 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.2.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // ✅ Needed for LocalLifecycleOwner in Compose
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // CameraX (guided capture)
+    // CameraX
     implementation("androidx.camera:camera-camera2:1.3.3")
     implementation("androidx.camera:camera-lifecycle:1.3.3")
     implementation("androidx.camera:camera-view:1.3.3")
@@ -65,9 +68,9 @@ dependencies {
     // JSON
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
-    // Encryption for export bundles (AES ZIP)
+    // ZIP
     implementation("net.lingala.zip4j:zip4j:2.11.5")
 
-    // Filament-based GLB viewer via SceneView (lightweight integration)
+    // SceneView
     implementation("io.github.sceneview:sceneview:2.2.1")
 }
