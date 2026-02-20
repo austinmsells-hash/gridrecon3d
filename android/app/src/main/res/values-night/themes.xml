@@ -1,12 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- App theme -->
     <style name="Theme.GridRecon3D" parent="Theme.Material3.DayNight">
-        <!-- No ActionBar -->
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-
-        <!-- Optional: status bar -->
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
