@@ -1,0 +1,8 @@
+<resources>
+    <color name="gr_black">#050607</color>
+    <color name="gr_panel">#0B0F14</color>
+    <color name="gr_red">#FF2D2D</color>
+    <color name="gr_red_dim">#B71C1C</color>
+    <color name="gr_text">#E6EEF5</color>
+    <color name="gr_muted">#90A4AE</color>
+</resources>
