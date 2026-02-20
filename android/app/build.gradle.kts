@@ -15,6 +15,15 @@ android {
         versionName = "0.1-beta"
     }
 
+    // ✅ Make Java + Kotlin agree (JDK 17)
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     buildFeatures {
         compose = true
     }
