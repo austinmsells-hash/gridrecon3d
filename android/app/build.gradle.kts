@@ -15,9 +15,16 @@ android {
         versionName = "0.1-beta"
     }
 
-    buildFeatures {
-        compose = true
+    // Keep Java + Kotlin aligned (CI uses JDK 17)
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures { compose = true }
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -36,11 +43,11 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.compose.material3:material3")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // ✅ Fixes LocalLifecycleOwner (CaptureCameraScreen)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+    // ✅ Needed for LocalLifecycleOwner (CaptureCameraScreen)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
