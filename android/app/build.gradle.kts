@@ -69,6 +69,10 @@ dependencies {
     // Encryption for export bundles (AES ZIP)
     implementation("net.lingala.zip4j:zip4j:2.11.5")
 
+    
+    // Map (OSM tiles, no API key)
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
+
     // 3D viewer
     implementation("io.github.sceneview:sceneview:2.2.1")
 }
