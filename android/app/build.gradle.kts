@@ -15,7 +15,7 @@ android {
         versionName = "0.1-beta"
     }
 
-    // Java + Kotlin agree (JDK 17)
+    // Make Java + Kotlin agree (JDK 17)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -46,20 +46,21 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // ✅ Needed for LocalLifecycleOwner (fixes your error)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0")
+    // ✅ Needed for LocalLifecycleOwner (fixes your current error)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // CameraX (CaptureCameraScreen)
+    // CameraX
     implementation("androidx.camera:camera-camera2:1.3.3")
     implementation("androidx.camera:camera-lifecycle:1.3.3")
     implementation("androidx.camera:camera-view:1.3.3")
 
-    // Biometric lock (kept)
+    // Biometric lock
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
     // Networking
@@ -68,10 +69,9 @@ dependencies {
     // JSON
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
-    // Encryption for export bundles
+    // Encryption
     implementation("net.lingala.zip4j:zip4j:2.11.5")
 
-    // 3D viewer
+    // 3D Viewer
     implementation("io.github.sceneview:sceneview:2.2.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 }
