@@ -73,4 +73,5 @@ dependencies {
 
     // 3D viewer
     implementation("io.github.sceneview:sceneview:2.2.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 }
