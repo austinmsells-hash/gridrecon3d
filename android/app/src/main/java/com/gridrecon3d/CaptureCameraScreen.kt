@@ -1,178 +1,224 @@
 package com.gridrecon3d
 
+import android.Manifest
 import android.content.Context
-import android.os.Environment
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaptureCameraScreen(
     mode: String,
     jobId: String,
     onBack: () -> Unit,
-    onDone: (List<File>) -> Unit
+    onDone: () -> Unit
 ) {
     val ctx = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val previewView = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
-    var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    var hasCam by remember { mutableStateOf(false) }
+    var shots by remember { mutableStateOf(0) }
+    var torchOn by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("Ready") }
 
-    var shots by remember { mutableStateOf<List<File>>(emptyList()) }
-    var status by remember { mutableStateOf<String?>(null) }
+    val camPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> hasCam = granted }
 
     LaunchedEffect(Unit) {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-        cameraProviderFuture.addListener(
-            {
-                val cameraProvider = cameraProviderFuture.get()
-                val preview = androidx.camera.core.Preview.Builder().build().apply {
-                    setSurfaceProvider(previewView.surfaceProvider)
-                }
-                val cap = ImageCapture.Builder()
-                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                    .build()
-                imageCapture = cap
-
-                try {
-                    cameraProvider.unbindAll()
-                    cameraProvider.bindToLifecycle(
-                        lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
-                        cap
-                    )
-                } catch (_: Exception) {
-                    status = "Camera init failed."
-                }
-            },
-            ContextCompat.getMainExecutor(ctx)
-        )
+        val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        hasCam = granted
+        if (!granted) camPermissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    fun captureOne() {
-        val cap = imageCapture ?: return
-        val outDir = File(ctx.getExternalFilesDir(null), "captures/$jobId").apply { mkdirs() }
-        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
-        val file = File(outDir, "IMG_$stamp.jpg")
-        val output = ImageCapture.OutputFileOptions.Builder(file).build()
+    val imageCapture = remember {
+        ImageCapture.Builder()
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .build()
+    }
 
+    var boundCamera by remember { mutableStateOf<Camera?>(null) }
+
+    fun outputDir(context: Context): File {
+        val root = File(context.filesDir, "captures/$jobId")
+        root.mkdirs()
+        return root
+    }
+
+    fun takePhoto() {
+        val dir = outputDir(ctx)
+        val ts = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
+        val f = File(dir, "IMG_$ts.jpg")
+        val out = ImageCapture.OutputFileOptions.Builder(f).build()
         status = "Capturing…"
-        cap.takePicture(
-            output,
+        imageCapture.takePicture(
+            out,
             ContextCompat.getMainExecutor(ctx),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    shots = shots + file
-                    status = null
+                    shots += 1
+                    status = "Captured $shots"
                 }
-
                 override fun onError(exception: ImageCaptureException) {
-                    status = "Error: ${exception.message}"
+                    status = "Capture error"
+                    Log.e("GridRecon3D", "Capture error", exception)
                 }
             }
         )
     }
 
-    fun undoLast() {
-        if (shots.isEmpty()) return
-        val last = shots.last()
-        try { last.delete() } catch (_: Exception) {}
-        shots = shots.dropLast(1)
-    }
+    Column(Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text("CAPTURE • ${mode.uppercase()}") },
+            navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+            actions = {
+                Text("Shots: $shots", modifier = Modifier.padding(end = 12.dp))
+            }
+        )
 
-    val accent = Color(0xFFFF2D2D)
+        Box(Modifier.fillMaxSize()) {
+            if (!hasCam) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Camera permission required")
+                }
+                return@Column
+            }
 
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-
-        // Top bar
-        Row(
-            Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            TextButton(onClick = onBack) { Text("Back", color = Color.White) }
-            Text("CAPTURE · ${mode.uppercase()}", color = accent)
-            Text("Shots: ${shots.size}", color = Color.White)
-        }
-
-        // Camera preview + overlay grid
-        Box(Modifier.weight(1f).fillMaxWidth()) {
             AndroidView(
-                factory = { previewView },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    val previewView = PreviewView(context).apply {
+                        // This avoids some devices rendering black preview in certain conditions
+                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                    }
+
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+                    cameraProviderFuture.addListener({
+                        val cameraProvider = cameraProviderFuture.get()
+
+                        val preview = Preview.Builder().build().also {
+                            it.setSurfaceProvider(previewView.surfaceProvider)
+                        }
+
+                        val selector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                        try {
+                            cameraProvider.unbindAll()
+                            boundCamera = cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                selector,
+                                preview,
+                                imageCapture
+                            )
+                            // Apply current torch state
+                            boundCamera?.cameraControl?.enableTorch(torchOn)
+                        } catch (e: Exception) {
+                            Log.e("GridRecon3D", "Camera bind failed", e)
+                            status = "Camera bind failed"
+                        }
+                    }, ContextCompat.getMainExecutor(context))
+
+                    previewView
+                },
+                update = {
+                    // keep torch state in sync
+                    boundCamera?.cameraControl?.enableTorch(torchOn)
+                }
             )
 
-            Canvas(Modifier.fillMaxSize()) {
+            // HUD overlay (grid + reticle like brochure)
+            Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
-                val c = Color(0x66FF2D2D)
-
-                // rule-of-thirds grid
-                drawLine(c, Offset(w / 3f, 0f), Offset(w / 3f, h), 1.5f)
-                drawLine(c, Offset(2f * w / 3f, 0f), Offset(2f * w / 3f, h), 1.5f)
-                drawLine(c, Offset(0f, h / 3f), Offset(w, h / 3f), 1.5f)
-                drawLine(c, Offset(0f, 2f * h / 3f), Offset(w, 2f * h / 3f), 1.5f)
-
+                val grid = Color(0x33FF2D2D)
+                // thirds grid
+                drawLine(grid, Offset(w/3f, 0f), Offset(w/3f, h), 1.5f)
+                drawLine(grid, Offset(2f*w/3f, 0f), Offset(2f*w/3f, h), 1.5f)
+                drawLine(grid, Offset(0f, h/3f), Offset(w, h/3f), 1.5f)
+                drawLine(grid, Offset(0f, 2f*h/3f), Offset(w, 2f*h/3f), 1.5f)
                 // center reticle
-                drawCircle(Color(0x99FF2D2D), radius = 10f, center = Offset(w / 2f, h / 2f))
-                drawCircle(Color(0x33FF2D2D), radius = 28f, center = Offset(w / 2f, h / 2f))
+                val c = Offset(w/2f, h/2f)
+                drawCircle(Color(0x66FF2D2D), radius = 16f, center = c)
+                drawCircle(Color(0xFFFF2D2D), radius = 6f, center = c)
             }
-        }
 
-        if (status != null) {
-            Box(Modifier.fillMaxWidth().padding(12.dp)) {
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xAA0B0F14))) {
-                    Text(status!!, color = Color.White, modifier = Modifier.padding(10.dp))
+            // Bottom control bar
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        Text(status, modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp))
+                    }
+
+                    AssistChip(
+                        onClick = { torchOn = !torchOn },
+                        label = { Text(if (torchOn) "Torch: ON" else "Torch: OFF") }
+                    )
                 }
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(onClick = onDone) { Text("DONE") }
+
+                    Button(
+                        onClick = { takePhoto() },
+                        contentPadding = PaddingValues(horizontal = 26.dp, vertical = 16.dp)
+                    ) { Text("SCAN") }
+
+                    OutlinedButton(
+                        onClick = {
+                            // simple undo: delete last file if exists
+                            val dir = outputDir(ctx)
+                            val last = dir.listFiles()?.filter { it.name.endsWith(".jpg") }?.sortedBy { it.name }?.lastOrNull()
+                            if (last != null && last.delete()) {
+                                shots = maxOf(0, shots - 1)
+                                status = "Undo"
+                            }
+                        }
+                    ) { Text("UNDO") }
+                }
+
+                Text(
+                    "Tip: 60–120 photos, steady overlap. Low light? Turn Torch ON.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
-
-        // Bottom controls
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            OutlinedButton(
-                onClick = { onDone(shots) },
-                enabled = shots.isNotEmpty()
-            ) { Text("DONE") }
-
-            Button(
-                onClick = { captureOne() },
-                modifier = Modifier.size(72.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accent)
-            ) { Text("•", color = Color.Black) }
-
-            OutlinedButton(
-                onClick = { undoLast() },
-                enabled = shots.isNotEmpty()
-            ) { Text("UNDO") }
-        }
-
-        Text(
-            "Tip: 3+ photos = best results. More overlap improves detail.",
-            color = Color(0xFF90A4AE),
-            modifier = Modifier.padding(16.dp, 0.dp, 16.dp, 12.dp)
-        )
     }
 }
