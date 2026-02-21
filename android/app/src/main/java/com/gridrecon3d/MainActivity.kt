@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,15 +22,50 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    CameraGate(onExit = { finish() })
+                    AppRoot(onExit = { finish() })
                 }
             }
         }
     }
 }
 
+private sealed class Screen {
+    data class Capture(val mode: String, val jobId: String) : Screen()
+    data class Review(val jobId: String, val shots: List<File>) : Screen()
+}
+
 @Composable
-private fun CameraGate(onExit: () -> Unit) {
+private fun AppRoot(onExit: () -> Unit) {
+    var screen by remember { mutableStateOf<Screen>(Screen.Capture("scan", "job_${System.currentTimeMillis()}")) }
+
+    when (val s = screen) {
+        is Screen.Capture -> CameraGate(
+            onExit = onExit,
+            mode = s.mode,
+            jobId = s.jobId,
+            onDone = { shots ->
+                screen = Screen.Review(jobId = s.jobId, shots = shots)
+            }
+        )
+
+        is Screen.Review -> CaptureReviewScreen(
+            jobId = s.jobId,
+            shots = s.shots,
+            onNewCapture = {
+                screen = Screen.Capture("scan", "job_${System.currentTimeMillis()}")
+            },
+            onExit = onExit
+        )
+    }
+}
+
+@Composable
+private fun CameraGate(
+    onExit: () -> Unit,
+    mode: String,
+    jobId: String,
+    onDone: (List<File>) -> Unit
+) {
     var hasCameraPermission by remember { mutableStateOf(false) }
 
     val requestPermission = rememberLauncherForActivityResult(
@@ -44,10 +80,10 @@ private fun CameraGate(onExit: () -> Unit) {
 
     if (hasCameraPermission) {
         CaptureCameraScreen(
-            mode = "scan",
-            jobId = "job_${System.currentTimeMillis()}",
+            mode = mode,
+            jobId = jobId,
             onBack = onExit,
-            onDone = { _ -> onExit() }
+            onDone = onDone
         )
     } else {
         Column(
